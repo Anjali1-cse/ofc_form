@@ -63,6 +63,18 @@ app.get('/popcode', async (req, res) => {
   }
 });
 
+// Fetch unique sections
+app.get('/sections', async (req, res) => {
+    try {
+      const result = await pool.query('SELECT "ROUTE_NAME" FROM "MDWDM_ROUTES" ORDER BY "ROUTE_NAME";');
+      res.json(result.rows);
+    } catch (err) {
+      console.error(err.message);
+      res.status(500).send('Server Error');
+    }
+  });
+  
+
 // Route to insert form data into new_ofc_coordinates
 app.post('/submit', async (req, res) => {
   const {
