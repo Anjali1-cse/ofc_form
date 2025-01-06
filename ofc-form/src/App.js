@@ -14,7 +14,7 @@ function App() {
     a_end: "",
     a_latitude: "",
     a_longitude: "",
-    b_pop: "",
+    b_end: "",
     b_latitude: "",
     b_longitude: "",
   });
@@ -25,6 +25,7 @@ function App() {
   const [popcode, setPopcode] = useState([]);
   const [loading, setLoading] = useState(false);
 
+  // Fetch Regions
   useEffect(() => {
     const fetchRegions = async () => {
       try {
@@ -37,68 +38,80 @@ function App() {
         );
       } catch (error) {
         console.error("Error fetching regions:", error);
-        alert("Failed to load regions. Please try again later.");
-      }
-    };
-
-    const fetchTerritories = async () => {
-      try {
-        const response = await axios.get("http://localhost:5001/territories");
-        setTerritories(
-          response.data.map((item) => ({
-            value: item.territory_code,
-            label: item.territory_code,
-          }))
-        );
-      } catch (error) {
-        console.error("Error fetching territories:", error);
-        alert("Failed to load territories. Please try again later.");
-      }
-    };
-
-    const fetchSections = async () => {
-      try {
-        const response = await axios.get("http://localhost:5001/sections");
-        setSections(
-          response.data.map((item) => ({
-            value: item.ROUTE_NAME,
-            label: item.ROUTE_NAME,
-          }))
-        );
-      } catch (error) {
-        console.error("Error fetching sections:", error);
-        alert("Failed to load sections. Please try again later.");
-      }
-    };
-
-    const fetchPopcode = async () => {
-      try {
-        const response = await axios.get("http://localhost:5001/popcode");
-        setPopcode(
-          response.data.map((item) => ({
-            value: item.pop_code,
-            label: item.pop_code,
-          }))
-        );
-      } catch (error) {
-        console.error("Error fetching POP codes:", error);
-        alert("Failed to load POP codes. Please try again later.");
       }
     };
 
     fetchRegions();
-    fetchTerritories();
-    fetchSections();
-    fetchPopcode();
   }, []);
 
-  const handleChange = (selectedOption, actionMeta) => {
-    setFormData({
-      ...formData,
-      [actionMeta.name]: selectedOption ? selectedOption.value : "",
-    });
+  // Fetch Territories
+  const fetchTerritories = async (regionCode) => {
+    try {
+      const response = await axios.get(`http://localhost:5001/territories?region_code=${regionCode}`);
+      setTerritories(
+        response.data.map((item) => ({
+          value: item.territory_code,
+          label: item.territory_code,
+        }))
+      );
+    } catch (error) {
+      console.error("Error fetching territories:", error);
+    }
   };
 
+  // Fetch Sections
+  const fetchSections = async (regionCode) => {
+    try {
+      const response = await axios.get(`http://localhost:5001/sections?region_code=${regionCode}`);
+      setSections(
+        response.data.map((item) => ({
+          value: item.ROUTE_NAME,
+          label: item.ROUTE_NAME,
+        }))
+      );
+    } catch (error) {
+      console.error("Error fetching sections:", error);
+      alert("Failed to load sections. Please try again later.");
+    }
+  };
+
+  // Fetch POP Codes
+  const fetchPopcode = async (regionCode) => {
+    try {
+      const response = await axios.get(`http://localhost:5001/popcode?region_code=${regionCode}`);
+      setPopcode(
+        response.data.map((item) => ({
+          value: item.pop_code,
+          label: item.pop_code,
+        }))
+      );
+    } catch (error) {
+      console.error("Error fetching POP codes:", error);
+      alert("Failed to load POP codes. Please try again later.");
+    }
+  };
+
+  // Handle Change for Select Fields
+  const handleChange = (selectedOption, actionMeta) => {
+    const value = selectedOption ? selectedOption.value : "";
+
+    setFormData((prevData) => ({
+      ...prevData,
+      [actionMeta.name]: value,
+    }));
+
+    if (actionMeta.name === "region") {
+      setTerritories([]);
+      setFormData((prevData) => ({ ...prevData, territory: "" }));
+      if (value) {
+        fetchTerritories(value);
+        fetchSections(value);
+        fetchPopcode(value);
+      }
+    }
+  };
+
+  // Handle Input Change for Text Fields
   const handleInputChange = (e) => {
     setFormData({
       ...formData,
@@ -106,6 +119,7 @@ function App() {
     });
   };
 
+  // Handle Form Submission
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
@@ -122,13 +136,12 @@ function App() {
         a_end: "",
         a_latitude: "",
         a_longitude: "",
-        b_pop: "",
+        b_end: "",
         b_latitude: "",
         b_longitude: "",
       });
     } catch (error) {
       console.error("Error submitting the form:", error);
-      alert("Error submitting the form. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -138,40 +151,68 @@ function App() {
     <div>
       <h1>Section Survey Form</h1>
       <form onSubmit={handleSubmit}>
+        {/* Region Field */}
         <label>Region:</label>
         <Select
           name="region"
           options={regions}
           onChange={handleChange}
-          value={regions.find((option) => option.value === formData.region)}
+          value={regions.find((option) => option.value === formData.region) || null}
           placeholder="Select Region"
           isClearable
         />
         <br />
 
+        {/* Territory Field */}
         <label>Territory:</label>
         <Select
           name="territory"
           options={territories}
           onChange={handleChange}
-          value={territories.find((option) => option.value === formData.territory)}
+          value={territories.find((option) => option.value === formData.territory) || null}
           placeholder="Select Territory"
           isClearable
         />
         <br />
 
+        {/* Section Field */}
         <label>Long-haul Section:</label>
         <Select
           name="section"
           options={sections}
           onChange={handleChange}
-          value={sections.find((option) => option.value === formData.section)}
+          value={sections.find((option) => option.value === formData.section) || null}
           placeholder="Select Section"
           isClearable
         />
         <br />
 
+        {/* POP Codes */}
         <h3>Short-Haul Section</h3>
+        <label>A End Short POP:</label>
+        <Select
+          name="a_end_short_pop"
+          options={popcode}
+          onChange={handleChange}
+          value={popcode.find((option) => option.value === formData.a_end_short_pop) || null}
+          placeholder="Select A POP Code"
+          isClearable
+        />
+        <br />
+
+        <label>B End Short POP:</label>
+        <Select
+          name="b_end_short_pop"
+          options={popcode}
+          onChange={handleChange}
+          value={popcode.find((option) => option.value === formData.b_end_short_pop) || null}
+          placeholder="Select B POP Code"
+          isClearable
+        />
+        <br />
+
+        {/* OFC Coordinates */}
+        <h3>Enter the New OFC Coordinates</h3>
         <label>Cable Type:</label>
         <Select
           name="cable_type"
@@ -181,15 +222,17 @@ function App() {
             { value: "96 FIBER", label: "96 FIBER" },
           ]}
           onChange={handleChange}
-          value={{
-            value: formData.cable_type,
-            label: formData.cable_type,
-          }}
+          value={
+            formData.cable_type
+              ? { value: formData.cable_type, label: formData.cable_type }
+              : null
+          }
           placeholder="Select Cable Type"
           isClearable
         />
         <br />
 
+        {/* A End Location */}
         <label>A End LOCATION NAME:</label>
         <input
           type="text"
@@ -200,7 +243,7 @@ function App() {
         />
         <br />
 
-        {/* Render latitude and longitude in a row if A End is filled */}
+        {/* A End Coordinates */}
         {formData.a_end && (
           <div style={{ display: "flex", gap: "10px" }}>
             <div>
@@ -229,7 +272,7 @@ function App() {
         )}
         <br />
 
-
+        {/* B End Location */}
         <label>B End LOCATION NAME:</label>
         <input
           type="text"
@@ -238,9 +281,8 @@ function App() {
           onChange={handleInputChange}
           required
         />
-        <br />
 
-        {/* Render latitude and longitude in a row if A End is filled */}
+        {/* B End Coordinates */}
         {formData.b_end && (
           <div style={{ display: "flex", gap: "10px" }}>
             <div>
@@ -269,6 +311,7 @@ function App() {
         )}
         <br />
 
+        {/* Submit Button */}
         <button type="submit" disabled={loading}>
           {loading ? "Submitting..." : "Submit"}
         </button>
